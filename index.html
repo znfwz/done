@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Done. | Minimalist Work Log</title>
+    <title>Done. | 极简工作日志</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -126,7 +126,8 @@
           formatRaw: "Raw Text",
           formatGrouped: "Report Style",
           formatRawDesc: "[Date] Content",
-          formatGroupedDesc: "Grouped by Date"
+          formatGroupedDesc: "Grouped by Date",
+          copyFailed: "Copy failed manually."
         },
         zh: {
           today: "今天",
@@ -172,7 +173,8 @@
           formatRaw: "原始文本",
           formatGrouped: "周报排版",
           formatRawDesc: "[日期] 内容",
-          formatGroupedDesc: "按日期分组"
+          formatGroupedDesc: "按日期分组",
+          copyFailed: "复制失败，请手动复制。"
         }
       };
 
@@ -249,6 +251,51 @@
         const offset = dateObj.getTimezoneOffset() * 60000; 
         const localDate = new Date(dateObj.getTime() - offset);
         return localDate.toISOString().slice(0, 16);
+      };
+
+      // Robust copy to clipboard function (works in HTTP/Non-secure contexts)
+      const copyToClipboard = (text) => {
+        return new Promise((resolve, reject) => {
+          // 1. Try Modern Async API (Secure Contexts)
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+              .then(resolve)
+              .catch(() => {
+                // Fallback if API fails
+                tryFallbackCopy(text, resolve, reject);
+              });
+          } else {
+            // 2. Fallback for HTTP/Legacy
+            tryFallbackCopy(text, resolve, reject);
+          }
+        });
+      };
+
+      const tryFallbackCopy = (text, resolve, reject) => {
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = text;
+          
+          // Ensure it's not visible but part of DOM
+          textArea.style.position = "fixed";
+          textArea.style.left = "-9999px";
+          textArea.style.top = "0";
+          
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          if (successful) {
+            resolve();
+          } else {
+            reject(new Error("execCommand returned false"));
+          }
+        } catch (err) {
+          reject(err);
+        }
       };
 
       // Helper to parse imported text
@@ -602,9 +649,15 @@
               }).join('\n\n');
           }
 
-          navigator.clipboard.writeText(text || (lang === 'zh' ? "无记录" : "No logs found"));
-          setCopiedState(range);
-          setTimeout(() => setCopiedState('none'), 2000);
+          const textToCopy = text || (lang === 'zh' ? "无记录" : "No logs found");
+          
+          copyToClipboard(textToCopy).then(() => {
+            setCopiedState(range);
+            setTimeout(() => setCopiedState('none'), 2000);
+          }).catch((err) => {
+             console.error(err);
+             alert(t('copyFailed'));
+          });
         };
 
         return (
