@@ -102,7 +102,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`flex flex-col h-screen bg-gray-50 dark:bg-gray-950 max-w-3xl mx-auto shadow-2xl border-x border-gray-200 dark:border-gray-800 transition-colors duration-300`}>
+    <div className={`flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-950 max-w-3xl mx-auto shadow-2xl border-x border-gray-200 dark:border-gray-800 transition-colors duration-300`}>
       
       {/* Header */}
       <header className="flex-none bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-colors duration-300">

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#111827" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -617,6 +617,13 @@
           }
         };
 
+        const handleFocus = (e) => {
+           // Helps clear obstruction on some mobile browsers
+           setTimeout(() => {
+               e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+           }, 300);
+        };
+
         return (
           <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 pb-6 md:pb-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
             <form onSubmit={handleSubmit} className="max-w-3xl mx-auto relative flex items-center">
@@ -625,6 +632,7 @@
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onFocus={handleFocus}
                 placeholder={t('placeholder')}
                 className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 border-0 rounded-xl px-4 py-3.5 pr-12 focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-500 focus:bg-white dark:focus:bg-gray-800 transition-all text-base shadow-inner dark:shadow-none"
               />
@@ -963,6 +971,7 @@
                         placeholder={t('pastePlaceholder')}
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
+                        onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                     />
                 </div>
 
@@ -1062,7 +1071,7 @@
         };
 
         return (
-          <div className={`flex flex-col h-screen bg-gray-50 dark:bg-gray-950 max-w-3xl mx-auto shadow-2xl border-x border-gray-200 dark:border-gray-800 transition-colors duration-300`}>
+          <div className={`flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-950 max-w-3xl mx-auto shadow-2xl border-x border-gray-200 dark:border-gray-800 transition-colors duration-300`}>
             
             <header className="flex-none bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-colors duration-300">
               <div className="flex items-center space-x-2">
