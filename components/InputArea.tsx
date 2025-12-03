@@ -20,6 +20,15 @@ const InputArea: React.FC<InputAreaProps> = ({ onAdd, lang }) => {
     }
   }, []);
 
+  const handleFocus = () => {
+    // Helps on mobile to ensure the input is visible above keyboard
+    if (inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim()) {
@@ -28,13 +37,6 @@ const InputArea: React.FC<InputAreaProps> = ({ onAdd, lang }) => {
       // Keep focus for rapid entry
       if (inputRef.current) inputRef.current.focus();
     }
-  };
-
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Scroll element into view with a slight delay to allow keyboard animation
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
   };
 
   return (

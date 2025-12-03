@@ -49,6 +49,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Handle cross-origin requests or non-GET requests gracefully
   if (event.request.method !== 'GET') return;
+  // Ignore unsupported schemes (like chrome-extension://)
+  if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
     fetch(event.request)

@@ -8,7 +8,8 @@ import {
   loadTheme, 
   saveTheme,
   loadApiKey,
-  saveApiKey
+  saveApiKey,
+  generateId
 } from './services/storage';
 import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload } from 'lucide-react';
 import Timeline from './components/Timeline';
@@ -16,11 +17,6 @@ import InputArea from './components/InputArea';
 import ExportModal from './components/ExportModal';
 import ImportModal from './components/ImportModal';
 import { getTranslation } from './services/i18n';
-
-// Simple ID generator that works in all browser contexts (including non-secure ones)
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-};
 
 const App: React.FC = () => {
   // Initialize state directly from storage to prevent flash of empty content
@@ -165,7 +161,7 @@ const App: React.FC = () => {
                     className="absolute right-2 top-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                     title={t('save')}
                  >
-                   {keySaved ? <Check size={16} /> : <Check size={16} className="opacity-0" />} {/* Use Check icon for save action logic or replace with Save icon */}
+                   {keySaved ? <Check size={16} /> : <Check size={16} className="opacity-0" />}
                  </button>
                </div>
              </div>

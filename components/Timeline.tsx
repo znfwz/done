@@ -6,7 +6,7 @@ import { getTranslation } from '../services/i18n';
 interface TimelineProps {
   entries: LogEntry[];
   onDelete: (id: string) => void;
-  onUpdate: (id: string, newContent: string) => void;
+  onUpdate: (id: string, newContent: string, newTimestamp?: string) => void;
   lang: Language;
 }
 

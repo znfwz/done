@@ -5,6 +5,11 @@ const LANG_KEY = 'done_app_lang';
 const THEME_KEY = 'done_app_theme';
 const API_KEY_STORAGE = 'done_app_api_key';
 
+// Simple ID generator that works in all browser contexts
+export const generateId = (): string => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+};
+
 export const loadEntries = (): LogEntry[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);

@@ -97,7 +97,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, entries, lan
             new Date(e.timestamp).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
                 weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
             })
-        ))) as string[];
+        )));
 
         text = uniqueDates.map(date => {
             const items = groups[date].map(e => {

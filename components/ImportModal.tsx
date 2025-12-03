@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, FileUp, Database, CheckCircle } from 'lucide-react';
 import { LogEntry, Language } from '../types';
 import { getTranslation } from '../services/i18n';
+import { generateId } from '../services/storage';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -9,10 +10,6 @@ interface ImportModalProps {
   onImport: (entries: LogEntry[]) => void;
   lang: Language;
 }
-
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-};
 
 const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport, lang }) => {
   const [inputText, setInputText] = useState('');
