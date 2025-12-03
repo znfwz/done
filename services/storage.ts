@@ -4,6 +4,7 @@ const STORAGE_KEY = 'done_app_logs_v1';
 const LANG_KEY = 'done_app_lang';
 const THEME_KEY = 'done_app_theme';
 const API_KEY_STORAGE = 'done_app_api_key';
+const TRASH_KEY = 'done_app_trash_v1';
 
 // Simple ID generator that works in all browser contexts
 export const generateId = (): string => {
@@ -25,6 +26,24 @@ export const saveEntries = (entries: LogEntry[]): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   } catch (e) {
     console.error("Failed to save entries", e);
+  }
+};
+
+export const loadTrash = (): LogEntry[] => {
+  try {
+    const stored = localStorage.getItem(TRASH_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error("Failed to load trash", e);
+    return [];
+  }
+};
+
+export const saveTrash = (trash: LogEntry[]): void => {
+  try {
+    localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
+  } catch (e) {
+    console.error("Failed to save trash", e);
   }
 };
 

@@ -61,7 +61,14 @@ export const translations: Translations = {
     copyFailed: "Copy failed manually.",
     apiKey: "Gemini API Key",
     apiKeyPlaceholder: "Enter your API Key",
-    apiKeySaved: "Key saved"
+    apiKeySaved: "Key saved",
+    trash: "Trash",
+    emptyTrash: "Empty Trash",
+    restore: "Restore",
+    trashEmpty: "Trash is empty.",
+    trashLimit: "Only the last 10 deleted items are saved.",
+    deletedToTrash: "Item moved to Trash.",
+    confirmEmptyTrash: "Are you sure you want to permanently delete all items in trash?"
   },
   zh: {
     today: "今天",
@@ -117,7 +124,14 @@ export const translations: Translations = {
     copyFailed: "复制失败，请手动复制。",
     apiKey: "Gemini API Key",
     apiKeyPlaceholder: "输入 API Key",
-    apiKeySaved: "Key 已保存"
+    apiKeySaved: "Key 已保存",
+    trash: "回收站",
+    emptyTrash: "清空回收站",
+    restore: "恢复",
+    trashEmpty: "回收站为空。",
+    trashLimit: "仅保存最近 10 条删除记录。",
+    deletedToTrash: "记录已移至回收站。",
+    confirmEmptyTrash: "确定要清空回收站吗？操作无法撤销。"
   }
 };
 

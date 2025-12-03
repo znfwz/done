@@ -9,18 +9,22 @@ import {
   saveTheme,
   loadApiKey,
   saveApiKey,
+  loadTrash,
+  saveTrash,
   generateId
 } from './services/storage';
-import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload } from 'lucide-react';
+import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload, Trash2 } from 'lucide-react';
 import Timeline from './components/Timeline';
 import InputArea from './components/InputArea';
 import ExportModal from './components/ExportModal';
 import ImportModal from './components/ImportModal';
+import TrashModal from './components/TrashModal';
 import { getTranslation } from './services/i18n';
 
 const App: React.FC = () => {
   // Initialize state directly from storage to prevent flash of empty content
   const [entries, setEntries] = useState<LogEntry[]>(() => loadEntries());
+  const [trash, setTrash] = useState<LogEntry[]>(() => loadTrash());
   const [lang, setLang] = useState<Language>(() => loadLanguage());
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
   
@@ -33,6 +37,7 @@ const App: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
 
   const t = (key: string) => getTranslation(lang, key);
 
@@ -40,6 +45,11 @@ const App: React.FC = () => {
   useEffect(() => {
     saveEntries(entries);
   }, [entries]);
+
+  // Persist trash on change
+  useEffect(() => {
+    saveTrash(trash);
+  }, [trash]);
 
   // Persist settings
   useEffect(() => {
@@ -77,7 +87,29 @@ const App: React.FC = () => {
   };
 
   const deleteEntry = (id: string) => {
-    setEntries(prev => prev.filter(e => e.id !== id));
+    const itemToDelete = entries.find(e => e.id === id);
+    if (itemToDelete) {
+      setTrash(prev => {
+        // Add to trash, keep max 10
+        const newTrash = [itemToDelete, ...prev];
+        return newTrash.slice(0, 10);
+      });
+      setEntries(prev => prev.filter(e => e.id !== id));
+    }
+  };
+
+  const restoreEntry = (id: string) => {
+    const itemToRestore = trash.find(e => e.id === id);
+    if (itemToRestore) {
+      setEntries(prev => [...prev, itemToRestore]);
+      setTrash(prev => prev.filter(e => e.id !== id));
+    }
+  };
+
+  const emptyTrash = () => {
+    if (window.confirm(t('confirmEmptyTrash'))) {
+      setTrash([]);
+    }
   };
 
   const updateEntry = (id: string, newContent: string, newTimestamp?: string) => {
@@ -109,6 +141,13 @@ const App: React.FC = () => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Done.</h1>
         </div>
         <div className="flex items-center space-x-1">
+          <button 
+            onClick={() => setIsTrashOpen(true)}
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            title={t('trash')}
+          >
+            <Trash2 size={22} />
+          </button>
           <button 
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors relative"
@@ -257,6 +296,15 @@ const App: React.FC = () => {
           onClose={() => setIsImportOpen(false)}
           onImport={handleImport}
           lang={lang}
+      />
+      
+      <TrashModal 
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        trashItems={trash}
+        onRestore={restoreEntry}
+        onEmpty={emptyTrash}
+        lang={lang}
       />
 
     </div>
