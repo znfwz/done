@@ -8,7 +8,7 @@ export interface GroupedLogs {
   [dateString: string]: LogEntry[];
 }
 
-export type ExportRange = 'today' | 'week';
+export type ExportRange = 'today' | 'week' | 'month' | 'all';
 
 export interface GenerateReportOptions {
   range: ExportRange;

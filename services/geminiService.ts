@@ -1,18 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { LogEntry, Language } from '../types';
 
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Key not found");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
-export const generateWeeklyReport = async (entries: LogEntry[], language: Language): Promise<string> => {
+export const generateWeeklyReport = async (entries: LogEntry[], language: Language, apiKey: string): Promise<string> => {
+  if (!apiKey) return language === 'zh' ? "未设置 API Key" : "API Key missing";
   if (entries.length === 0) return language === 'zh' ? "没有找到记录。" : "No logs found to generate a report.";
 
-  const ai = getClient();
+  const ai = new GoogleGenAI({ apiKey });
   
   // Format entries for the prompt
   const entriesText = entries.map(e => {
@@ -51,6 +44,6 @@ export const generateWeeklyReport = async (entries: LogEntry[], language: Langua
     console.error("Gemini generation error:", error);
     return language === 'zh' 
       ? "连接 AI 服务出错，请检查网络或 API Key。" 
-      : "Error connecting to AI service. Please check your network or API key.";
+      : "Error connecting to AI service. Please check your network or API Key.";
   }
 };

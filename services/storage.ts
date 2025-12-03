@@ -3,6 +3,7 @@ import { LogEntry, Language, Theme } from '../types';
 const STORAGE_KEY = 'done_app_logs_v1';
 const LANG_KEY = 'done_app_lang';
 const THEME_KEY = 'done_app_theme';
+const API_KEY_STORAGE = 'done_app_api_key';
 
 export const loadEntries = (): LogEntry[] => {
   try {
@@ -42,7 +43,6 @@ export const loadTheme = (): Theme => {
   try {
     const stored = localStorage.getItem(THEME_KEY) as Theme;
     if (stored) return stored;
-    // Default to system preference if no saved preference
     if (typeof window !== 'undefined' && window.matchMedia) {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
@@ -57,5 +57,21 @@ export const saveTheme = (theme: Theme): void => {
     localStorage.setItem(THEME_KEY, theme);
   } catch (e) {
     console.error("Failed to save theme", e);
+  }
+};
+
+export const loadApiKey = (): string => {
+  try {
+    return localStorage.getItem(API_KEY_STORAGE) || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+export const saveApiKey = (key: string): void => {
+  try {
+    localStorage.setItem(API_KEY_STORAGE, key);
+  } catch (e) {
+    console.error("Failed to save API Key", e);
   }
 };

@@ -6,12 +6,15 @@ import {
   loadLanguage, 
   saveLanguage, 
   loadTheme, 
-  saveTheme 
+  saveTheme,
+  loadApiKey,
+  saveApiKey
 } from './services/storage';
-import { Settings, Download, X, Moon, Sun, Globe } from 'lucide-react';
+import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload } from 'lucide-react';
 import Timeline from './components/Timeline';
 import InputArea from './components/InputArea';
 import ExportModal from './components/ExportModal';
+import ImportModal from './components/ImportModal';
 import { getTranslation } from './services/i18n';
 
 // Simple ID generator that works in all browser contexts (including non-secure ones)
@@ -25,7 +28,14 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>(() => loadLanguage());
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
   
+  // API Key States
+  const [apiKey, setApiKey] = useState(() => loadApiKey());
+  const [tempKey, setTempKey] = useState(apiKey);
+  const [showKey, setShowKey] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
+  
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const t = (key: string) => getTranslation(lang, key);
@@ -49,6 +59,18 @@ const App: React.FC = () => {
     }
   }, [theme]);
 
+  // Sync temp key when real key changes or settings open
+  useEffect(() => {
+    setTempKey(apiKey);
+  }, [apiKey, isSettingsOpen]);
+
+  const saveApiKeyAction = () => {
+    saveApiKey(tempKey);
+    setApiKey(tempKey);
+    setKeySaved(true);
+    setTimeout(() => setKeySaved(false), 2000);
+  };
+
   const addEntry = (content: string) => {
     const newEntry: LogEntry = {
       id: generateId(),
@@ -62,8 +84,21 @@ const App: React.FC = () => {
     setEntries(prev => prev.filter(e => e.id !== id));
   };
 
-  const updateEntry = (id: string, newContent: string) => {
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, content: newContent } : e));
+  const updateEntry = (id: string, newContent: string, newTimestamp?: string) => {
+    setEntries(prev => prev.map(e => {
+      if (e.id === id) {
+        return { 
+          ...e, 
+          content: newContent,
+          timestamp: newTimestamp || e.timestamp 
+        };
+      }
+      return e;
+    }));
+  };
+
+  const handleImport = (newEntries: LogEntry[]) => {
+      setEntries(prev => [...prev, ...newEntries]);
   };
 
   return (
@@ -97,7 +132,7 @@ const App: React.FC = () => {
 
       {/* Settings Panel */}
       {isSettingsOpen && (
-        <div className="absolute top-16 right-4 z-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl w-64 p-4 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-16 right-4 z-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl w-72 p-4 animate-in fade-in slide-in-from-top-2">
            <div className="flex justify-between items-center mb-4">
              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings')}</h3>
              <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -105,7 +140,36 @@ const App: React.FC = () => {
              </button>
            </div>
            
-           <div className="space-y-4">
+           <div className="space-y-5">
+             {/* API Key Section */}
+             <div>
+               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
+                 <Key size={12} className="mr-1" /> {t('apiKey')}
+               </label>
+               <div className="relative">
+                 <input 
+                    type={showKey ? "text" : "password"}
+                    value={tempKey}
+                    onChange={(e) => setTempKey(e.target.value)}
+                    placeholder={t('apiKeyPlaceholder')}
+                    className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 border-0 rounded-lg px-3 py-2 pr-16 text-sm focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-500 transition-all"
+                 />
+                 <button 
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-9 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                 <button 
+                    onClick={saveApiKeyAction}
+                    className="absolute right-2 top-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                    title={t('save')}
+                 >
+                   {keySaved ? <Check size={16} /> : <Check size={16} className="opacity-0" />} {/* Use Check icon for save action logic or replace with Save icon */}
+                 </button>
+               </div>
+             </div>
+
              {/* Language Toggle */}
              <div>
                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
@@ -147,6 +211,21 @@ const App: React.FC = () => {
                  </button>
                </div>
              </div>
+
+             {/* Data Management Section */}
+             <div>
+               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
+                 <Database size={12} className="mr-1" /> {t('data')}
+               </label>
+               <button 
+                 onClick={() => { setIsSettingsOpen(false); setIsImportOpen(true); }}
+                 className="w-full flex items-center justify-center space-x-2 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
+               >
+                 <Upload size={14} />
+                 <span>{t('import')}</span>
+               </button>
+             </div>
+
            </div>
         </div>
       )}
@@ -174,7 +253,16 @@ const App: React.FC = () => {
         onClose={() => setIsExportOpen(false)} 
         entries={entries} 
         lang={lang}
+        apiKey={apiKey}
       />
+
+      <ImportModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          onImport={handleImport}
+          lang={lang}
+      />
+
     </div>
   );
 };
