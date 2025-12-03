@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Done. | 极简工作日志</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -75,11 +83,9 @@
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useRef } from 'react';
       import ReactDOM from 'react-dom/client';
-      import { Trash2, Edit2, Check, X, Send, CornerDownLeft, Settings, Download, Moon, Sun, Globe, Copy, CheckCircle, FileText, CalendarClock, Archive, Calendar, Upload, FileUp, Database, List, AlignLeft } from 'lucide-react';
+      import { Trash2, Edit2, Check, X, Send, CornerDownLeft, Settings, Download, Moon, Sun, Globe, Copy, CheckCircle, FileText, CalendarClock, Archive, Calendar, Upload, FileUp, Database, List, AlignLeft, Key, Sparkles, Loader2, Eye, EyeOff } from 'lucide-react';
+      import { GoogleGenAI } from "@google/genai";
 
-      // --- Types ---
-      // Defined implicitly via usage since we are in a single file JS environment
-      
       // --- I18n Service ---
       const translations = {
         en: {
@@ -127,7 +133,16 @@
           formatGrouped: "Report Style",
           formatRawDesc: "[Date] Content",
           formatGroupedDesc: "Grouped by Date",
-          copyFailed: "Copy failed manually."
+          copyFailed: "Copy failed manually.",
+          apiKey: "Gemini API Key",
+          apiKeyPlaceholder: "Enter your API Key",
+          apiKeySaved: "Key saved",
+          aiAssistant: "AI Assistant",
+          generateReport: "Generate Weekly Report",
+          copyReport: "Copy Report",
+          aiDisclaimer: "Powered by Gemini 2.5 Flash.",
+          configureKey: "Please configure API Key in Settings to use AI.",
+          generating: "Generating..."
         },
         zh: {
           today: "今天",
@@ -174,7 +189,16 @@
           formatGrouped: "周报排版",
           formatRawDesc: "[日期] 内容",
           formatGroupedDesc: "按日期分组",
-          copyFailed: "复制失败，请手动复制。"
+          copyFailed: "复制失败，请手动复制。",
+          apiKey: "Gemini API Key",
+          apiKeyPlaceholder: "输入 API Key",
+          apiKeySaved: "Key 已保存",
+          aiAssistant: "AI 助手",
+          generateReport: "生成周报",
+          copyReport: "复制周报",
+          aiDisclaimer: "由 Gemini 2.5 Flash 提供支持。",
+          configureKey: "请先在设置中配置 API Key 以使用 AI 功能。",
+          generating: "生成中..."
         }
       };
 
@@ -186,6 +210,7 @@
       const STORAGE_KEY = 'done_app_logs_v1';
       const LANG_KEY = 'done_app_lang';
       const THEME_KEY = 'done_app_theme';
+      const API_KEY_STORAGE = 'done_app_api_key';
 
       const loadEntries = () => {
         try {
@@ -242,6 +267,22 @@
         }
       };
 
+      const loadApiKey = () => {
+        try {
+          return localStorage.getItem(API_KEY_STORAGE) || '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      const saveApiKey = (key) => {
+        try {
+          localStorage.setItem(API_KEY_STORAGE, key);
+        } catch (e) {
+          console.error("Failed to save API Key", e);
+        }
+      }
+
       // --- Helper ---
       const generateId = () => {
         return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -253,19 +294,15 @@
         return localDate.toISOString().slice(0, 16);
       };
 
-      // Robust copy to clipboard function (works in HTTP/Non-secure contexts)
       const copyToClipboard = (text) => {
         return new Promise((resolve, reject) => {
-          // 1. Try Modern Async API (Secure Contexts)
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text)
               .then(resolve)
               .catch(() => {
-                // Fallback if API fails
                 tryFallbackCopy(text, resolve, reject);
               });
           } else {
-            // 2. Fallback for HTTP/Legacy
             tryFallbackCopy(text, resolve, reject);
           }
         });
@@ -275,48 +312,33 @@
         try {
           const textArea = document.createElement("textarea");
           textArea.value = text;
-          
-          // Ensure it's not visible but part of DOM
           textArea.style.position = "fixed";
           textArea.style.left = "-9999px";
           textArea.style.top = "0";
-          
           document.body.appendChild(textArea);
           textArea.focus();
           textArea.select();
-          
           const successful = document.execCommand('copy');
           document.body.removeChild(textArea);
-          
-          if (successful) {
-            resolve();
-          } else {
-            reject(new Error("execCommand returned false"));
-          }
+          if (successful) resolve();
+          else reject(new Error("execCommand returned false"));
         } catch (err) {
           reject(err);
         }
       };
 
-      // Helper to parse imported text
       const parseImportText = (text) => {
         const lines = text.split('\n');
         const parsed = [];
-        // Regex looks for [Timestamp] Content
-        // e.g., [2024/1/1 10:00] Content
         const regex = /^\[(.*?)\]\s+(.*)$/;
-
         for (const line of lines) {
             const cleanLine = line.trim();
             if (!cleanLine) continue;
-
             const match = cleanLine.match(regex);
             if (match) {
                 const dateStr = match[1];
                 const content = match[2];
-                // Try to parse the date string
                 const timestamp = new Date(dateStr);
-                
                 if (!isNaN(timestamp.getTime())) {
                     parsed.push({
                         id: generateId(), 
@@ -327,6 +349,53 @@
             }
         }
         return parsed;
+      };
+
+      // --- Gemini Service ---
+      const generateWeeklyReport = async (entries, language, apiKey) => {
+        if (!apiKey) return language === 'zh' ? "未设置 API Key" : "API Key missing";
+        if (entries.length === 0) return language === 'zh' ? "没有找到记录。" : "No logs found to generate a report.";
+
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          
+          const entriesText = entries.map(e => {
+            const date = new Date(e.timestamp).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US');
+            const time = new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `[${date} ${time}] ${e.content}`;
+          }).join('\n');
+
+          const langInstruction = language === 'zh' 
+            ? "Please generate the report in Simplified Chinese (简体中文)." 
+            : "Please generate the report in English.";
+
+          const prompt = `
+            You are a helpful assistant for a busy professional. 
+            Below is a raw list of work logs. 
+            Please format them into a professional Weekly Report (or Daily Report if only one day).
+            
+            Rules:
+            1. Group by Date.
+            2. Summarize key achievements if possible, but keep the specific details.
+            3. Use a clean Markdown format with bullet points.
+            4. Tone: Professional, concise, objective.
+            5. Language: ${langInstruction}
+
+            Raw Logs:
+            ${entriesText}
+          `;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+          });
+          return response.text || (language === 'zh' ? "生成失败。" : "Failed to generate report.");
+        } catch (error) {
+          console.error("Gemini generation error:", error);
+          return language === 'zh' 
+            ? "连接 AI 服务出错，请检查网络或 API Key。" 
+            : "Error connecting to AI service. Please check your network or API Key.";
+        }
       };
 
       // --- Components ---
@@ -575,9 +644,11 @@
         );
       };
 
-      const ExportModal = ({ isOpen, onClose, entries, lang }) => {
+      const ExportModal = ({ isOpen, onClose, entries, lang, apiKey }) => {
         const [copiedState, setCopiedState] = useState('none');
         const [format, setFormat] = useState('raw'); // 'raw' | 'grouped'
+        const [isGenerating, setIsGenerating] = useState(false);
+        const [aiReport, setAiReport] = useState(null);
         
         const t = (key) => getTranslation(lang, key);
 
@@ -623,7 +694,6 @@
                   return `[${date} ${time}] ${e.content}`;
               }).join('\n');
           } else {
-              // Grouped by date (Report Style)
               const groups = {};
               filtered.forEach(e => {
                   const date = new Date(e.timestamp).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
@@ -633,7 +703,6 @@
                   groups[date].push(e);
               });
               
-              // We iterate based on the sorted filtered list to maintain chronological order
               const uniqueDates = [...new Set(filtered.map(e => 
                   new Date(e.timestamp).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
                       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
@@ -659,6 +728,24 @@
              alert(t('copyFailed'));
           });
         };
+
+        const handleGenerateAI = async () => {
+          setIsGenerating(true);
+          setAiReport(null);
+          const filtered = getFilteredEntries('week'); // Default to weekly report
+          const report = await generateWeeklyReport(filtered, lang, apiKey);
+          setAiReport(report);
+          setIsGenerating(false);
+        };
+
+        const handleCopyAIReport = () => {
+            if (aiReport) {
+                copyToClipboard(aiReport).then(() => {
+                    setCopiedState('week');
+                    setTimeout(() => setCopiedState('none'), 2000);
+                });
+            }
+        }
 
         return (
           <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -718,7 +805,7 @@
                       onClick={() => handleCopy('week')}
                       className="flex flex-col items-center justify-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all active:scale-95"
                     >
-                       {copiedState === 'week' ? <CheckCircle className="text-green-500 mb-2" /> : <Copy className="text-gray-600 dark:text-gray-400 mb-2" />}
+                       {copiedState === 'week' && !aiReport ? <CheckCircle className="text-green-500 mb-2" /> : <Copy className="text-gray-600 dark:text-gray-400 mb-2" />}
                       <span className="font-medium text-gray-900 dark:text-gray-100">{t('copyWeek')}</span>
                     </button>
 
@@ -743,6 +830,52 @@
                   </div>
                 </div>
 
+                {/* AI Feature */}
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                    <Sparkles size={14} className="mr-1 text-purple-500" /> {t('aiAssistant')}
+                  </h3>
+                  
+                  {apiKey ? (
+                    !aiReport ? (
+                      <button 
+                        onClick={handleGenerateAI}
+                        disabled={isGenerating}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-700 dark:to-gray-600 text-white rounded-xl shadow-lg hover:shadow-xl hover:from-gray-800 hover:to-gray-700 dark:hover:from-gray-600 dark:hover:to-gray-500 transition-all flex items-center justify-center space-x-2 disabled:opacity-70"
+                      >
+                        {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <FileText size={20} />}
+                        <span>{isGenerating ? t('generating') : t('generateReport')}</span>
+                      </button>
+                    ) : (
+                      <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-sm text-gray-700 dark:text-gray-300 max-h-60 overflow-y-auto whitespace-pre-wrap border border-gray-200 dark:border-gray-700 font-mono">
+                          {aiReport}
+                        </div>
+                        <div className="flex space-x-2">
+                            <button 
+                                onClick={handleCopyAIReport}
+                                className="flex-1 py-2 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                            >
+                                {t('copyReport')}
+                            </button>
+                            <button 
+                                onClick={() => setAiReport(null)}
+                                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                            >
+                                {t('back')}
+                            </button>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-xs rounded-lg flex items-center">
+                      <Settings size={14} className="mr-2 shrink-0" />
+                      {t('configureKey')}
+                    </div>
+                  )}
+                   <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 text-center">{t('aiDisclaimer')}</p>
+                </div>
+
               </div>
             </div>
           </div>
@@ -751,7 +884,7 @@
 
       const ImportModal = ({ isOpen, onClose, onImport, lang }) => {
         const [inputText, setInputText] = useState('');
-        const [status, setStatus] = useState(null); // { type: 'success' | 'error', message: string }
+        const [status, setStatus] = useState(null); 
         const fileInputRef = useRef(null);
         
         const t = (key, params) => {
@@ -858,6 +991,10 @@
         const [entries, setEntries] = useState(() => loadEntries());
         const [lang, setLang] = useState(() => loadLanguage());
         const [theme, setTheme] = useState(() => loadTheme());
+        const [apiKey, setApiKey] = useState(() => loadApiKey());
+        const [tempKey, setTempKey] = useState(apiKey);
+        const [showKey, setShowKey] = useState(false);
+        const [keySaved, setKeySaved] = useState(false);
         
         const [isExportOpen, setIsExportOpen] = useState(false);
         const [isImportOpen, setIsImportOpen] = useState(false);
@@ -881,6 +1018,18 @@
             document.documentElement.classList.remove('dark');
           }
         }, [theme]);
+
+        useEffect(() => {
+          // Initialize temp key when settings opens or key changes externally
+          setTempKey(apiKey);
+        }, [apiKey, isSettingsOpen]);
+
+        const saveApiKeyAction = () => {
+          saveApiKey(tempKey);
+          setApiKey(tempKey);
+          setKeySaved(true);
+          setTimeout(() => setKeySaved(false), 2000);
+        };
 
         const addEntry = (content) => {
           const newEntry = {
@@ -941,7 +1090,7 @@
             </header>
 
             {isSettingsOpen && (
-              <div className="absolute top-16 right-4 z-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl w-64 p-4 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute top-16 right-4 z-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl w-72 p-4 animate-in fade-in slide-in-from-top-2">
                  <div className="flex justify-between items-center mb-4">
                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings')}</h3>
                    <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -949,7 +1098,36 @@
                    </button>
                  </div>
                  
-                 <div className="space-y-4">
+                 <div className="space-y-5">
+                   {/* API Key Section */}
+                   <div>
+                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
+                       <Key size={12} className="mr-1" /> {t('apiKey')}
+                     </label>
+                     <div className="relative">
+                       <input 
+                          type={showKey ? "text" : "password"}
+                          value={tempKey}
+                          onChange={(e) => setTempKey(e.target.value)}
+                          placeholder={t('apiKeyPlaceholder')}
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 border-0 rounded-lg px-3 py-2 pr-16 text-sm focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-500 transition-all"
+                       />
+                       <button 
+                          onClick={() => setShowKey(!showKey)}
+                          className="absolute right-9 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        >
+                          {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                       <button 
+                          onClick={saveApiKeyAction}
+                          className="absolute right-2 top-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                          title={t('save')}
+                       >
+                         {keySaved ? <Check size={16} /> : <SaveIcon size={16} />}
+                       </button>
+                     </div>
+                   </div>
+
                    <div>
                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
                        <Globe size={12} className="mr-1" /> {t('language')}
@@ -1027,6 +1205,7 @@
               onClose={() => setIsExportOpen(false)} 
               entries={entries} 
               lang={lang}
+              apiKey={apiKey}
             />
 
             <ImportModal
@@ -1040,12 +1219,29 @@
         );
       };
 
+      const SaveIcon = ({size}) => (
+         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      );
+
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(
         <React.StrictMode>
           <App />
         </React.StrictMode>
       );
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
     </script>
   </body>
 </html>
