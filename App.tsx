@@ -13,12 +13,13 @@ import {
   saveTrash,
   generateId
 } from './services/storage';
-import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload, Trash2 } from 'lucide-react';
+import { Settings, Download, X, Moon, Sun, Globe, Key, Eye, EyeOff, Check, Database, Upload, Trash2, Search,Import,LogIn,LogOut } from 'lucide-react';
 import Timeline from './components/Timeline';
 import InputArea from './components/InputArea';
 import ExportModal from './components/ExportModal';
 import ImportModal from './components/ImportModal';
 import TrashModal from './components/TrashModal';
+import SearchModal from './components/SearchModal';
 import { getTranslation } from './services/i18n';
 
 const App: React.FC = () => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const t = (key: string) => getTranslation(lang, key);
 
@@ -142,6 +144,13 @@ const App: React.FC = () => {
         </div>
         <div className="flex items-center space-x-1">
           <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            title={t('search')}
+          >
+            <Search size={22} />
+          </button>
+          <button 
             onClick={() => setIsTrashOpen(true)}
             className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             title={t('trash')}
@@ -154,13 +163,6 @@ const App: React.FC = () => {
             title={t('settings')}
           >
             <Settings size={22} />
-          </button>
-          <button 
-            onClick={() => setIsExportOpen(true)}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-            title={t('export')}
-          >
-            <Download size={22} />
           </button>
         </div>
       </header>
@@ -252,13 +254,22 @@ const App: React.FC = () => {
                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center mb-2">
                  <Database size={12} className="mr-1" /> {t('data')}
                </label>
-               <button 
-                 onClick={() => { setIsSettingsOpen(false); setIsImportOpen(true); }}
-                 className="w-full flex items-center justify-center space-x-2 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
-               >
-                 <Upload size={14} />
-                 <span>{t('import')}</span>
-               </button>
+               <div className="space-y-2">
+                 <button 
+                   onClick={() => { setIsSettingsOpen(false); setIsImportOpen(true); }}
+                   className="w-full flex items-center justify-center space-x-2 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
+                 >
+                   <LogIn size={14} />
+                   <span>{t('import')}</span>
+                 </button>
+                 <button 
+                   onClick={() => { setIsSettingsOpen(false); setIsExportOpen(true); }}
+                   className="w-full flex items-center justify-center space-x-2 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
+                 >
+                   <LogOut size={14} />
+                   <span>{t('export')}</span>
+                 </button>
+               </div>
              </div>
 
            </div>
@@ -304,6 +315,15 @@ const App: React.FC = () => {
         trashItems={trash}
         onRestore={restoreEntry}
         onEmpty={emptyTrash}
+        lang={lang}
+      />
+
+      <SearchModal 
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        entries={entries}
+        onDelete={deleteEntry}
+        onUpdate={updateEntry}
         lang={lang}
       />
 

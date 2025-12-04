@@ -40,7 +40,7 @@ export const translations: Translations = {
     copyWeek: "This Week",
     copyMonth: "This Month",
     copyAll: "All Logs",
-    export: "Export",
+    export: "Export Logs",
     appearance: "Appearance",
     editTime: "Edit Time",
     data: "Data",
@@ -68,7 +68,10 @@ export const translations: Translations = {
     trashEmpty: "Trash is empty.",
     trashLimit: "Only the last 10 deleted items are saved.",
     deletedToTrash: "Item moved to Trash.",
-    confirmEmptyTrash: "Are you sure you want to permanently delete all items in trash?"
+    confirmEmptyTrash: "Are you sure you want to permanently delete all items in trash?",
+    search: "Search",
+    searchPlaceholder: "Search keywords...",
+    noSearchResults: "No matching records found."
   },
   zh: {
     today: "今天",
@@ -103,7 +106,7 @@ export const translations: Translations = {
     copyWeek: "复制本周",
     copyMonth: "复制本月",
     copyAll: "复制全部",
-    export: "导出",
+    export: "导出记录",
     appearance: "外观",
     editTime: "修改时间",
     data: "数据",
@@ -112,7 +115,7 @@ export const translations: Translations = {
     pasteLabel: "粘贴文本或上传 .txt 文件",
     pastePlaceholder: "格式: [日期 时间] 内容\n示例: [2023/10/25 10:30] 完成了会议纪要",
     uploadFile: "上传 .txt",
-    importBtn: "导入",
+    importBtn: "导入记录",
     importSuccess: "成功导入 {count} 条记录。",
     importError: "未发现有效记录，请检查格式。",
     parsing: "解析中...",
@@ -131,7 +134,10 @@ export const translations: Translations = {
     trashEmpty: "回收站为空。",
     trashLimit: "仅保存最近 10 条删除记录。",
     deletedToTrash: "记录已移至回收站。",
-    confirmEmptyTrash: "确定要清空回收站吗？操作无法撤销。"
+    confirmEmptyTrash: "确定要清空回收站吗？操作无法撤销。",
+    search: "搜索",
+    searchPlaceholder: "搜索关键词...",
+    noSearchResults: "未找到匹配的记录。"
   }
 };
 
